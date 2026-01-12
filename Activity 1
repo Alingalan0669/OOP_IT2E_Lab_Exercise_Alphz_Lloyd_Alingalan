@@ -1,0 +1,409 @@
+import java.awt.*;
+import java.util.Random;
+import javax.swing.*;
+
+public class ArithmeticGameGUI extends JFrame {
+    // Components
+    private JLabel titleLabel;
+    private JLabel questionLabel;
+    private JTextField answerField;
+    private JButton submitButton;
+    private JLabel scoreLabel;
+    private JLabel errorLabel;
+    private JComboBox<String> levelCombo;
+    private JButton startButton;
+    private JLabel timerLabel;
+
+    // Game variables
+    private int score = 0;
+    private int errors = 0;
+    private int questionsAnswered = 0;
+    private int num1, num2;
+    private String operation;
+    private int correctAnswer;
+    private Random random = new Random();
+    private String difficulty = "Easy";
+    private boolean gameStarted = false;
+    private Timer gameTimer;
+    private int timeRemaining = 0;
+    private int timeLimit = 30; // Default time limit
+
+    public ArithmeticGameGUI() {
+        setTitle("🎮 Arithmetic Game 🎮");
+        setSize(600, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        // Main panel with gradient background
+        JPanel mainPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                GradientPaint gp = new GradientPaint(0, 0, new Color(138, 43, 226), 0, getHeight(),
+                        new Color(255, 140, 0));
+                g2d.setPaint(gp);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+
+        // Title with modern styling
+        titleLabel = new JLabel("🎯 MATH CHALLENGE 🎯");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 38));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(Box.createVerticalStrut(10));
+        mainPanel.add(titleLabel);
+
+        // Timer display - prominent and visible
+        timerLabel = new JLabel("⏱️ Time: 30s");
+        timerLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        timerLabel.setForeground(new Color(255, 255, 100));
+        timerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(Box.createVerticalStrut(10));
+        mainPanel.add(timerLabel);
+
+        // Subtitle with fun emoji
+        JLabel subtitle = new JLabel("⭐ Test Your Math Skills! ⭐");
+        subtitle.setFont(new Font("Arial", Font.BOLD, 16));
+        subtitle.setForeground(Color.WHITE);
+        subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(Box.createVerticalStrut(5));
+        mainPanel.add(subtitle);
+
+        // Level selection panel with modern style
+        mainPanel.add(Box.createVerticalStrut(20));
+        JPanel levelPanel = new JPanel();
+        levelPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        levelPanel.setBackground(new Color(255, 255, 255, 230)); // Semi-transparent white
+        levelPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(255, 255, 255), 3),
+                BorderFactory.createEmptyBorder(12, 20, 12, 20)));
+        levelPanel.setMaximumSize(new Dimension(450, 70));
+
+        JLabel levelLabel = new JLabel("🎲 Difficulty:");
+        levelLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        levelLabel.setForeground(new Color(50, 50, 50));
+        levelPanel.add(levelLabel);
+
+        String[] levels = { "😊 Easy (1-50)", "😎 Medium (50-100)", "🔥 Hard (100-300)" };
+        levelCombo = new JComboBox<>(levels);
+        levelCombo.setFont(new Font("Arial", Font.BOLD, 14));
+        levelCombo.setPreferredSize(new Dimension(200, 40));
+        levelCombo.setBackground(new Color(255, 255, 255));
+        levelPanel.add(levelCombo);
+
+        mainPanel.add(levelPanel);
+
+        // Start button with modern styling
+        mainPanel.add(Box.createVerticalStrut(20));
+        startButton = new JButton("🚀 START GAME! 🚀");
+        startButton.setFont(new Font("Arial", Font.BOLD, 18));
+        startButton.setPreferredSize(new Dimension(250, 50));
+        startButton.setMaximumSize(new Dimension(250, 50));
+        startButton.setBackground(new Color(46, 204, 113)); // Modern green
+        startButton.setForeground(Color.WHITE);
+        startButton.setFocusPainted(false);
+        startButton.setBorder(BorderFactory.createLineBorder(new Color(39, 174, 96), 3));
+        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        startButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        startButton.addActionListener(e -> startGame());
+        mainPanel.add(startButton);
+
+        // Question area with modern card style
+        mainPanel.add(Box.createVerticalStrut(25));
+        JPanel questionPanel = new JPanel();
+        questionPanel.setBackground(new Color(255, 255, 255)); // White card
+        questionPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 2),
+                BorderFactory.createEmptyBorder(25, 30, 25, 30)));
+        questionPanel.setMaximumSize(new Dimension(500, 100));
+
+        questionLabel = new JLabel("👆 Press Start! 👆");
+        questionLabel.setFont(new Font("Arial", Font.BOLD, 26));
+        questionLabel.setForeground(new Color(52, 73, 94)); // Dark blue-gray
+        questionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        questionPanel.add(questionLabel);
+
+        mainPanel.add(questionPanel);
+
+        // Answer field with modern styling
+        mainPanel.add(Box.createVerticalStrut(20));
+        JLabel answerLabel = new JLabel("✏️ Your Answer:");
+        answerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        answerLabel.setForeground(Color.WHITE);
+        answerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(answerLabel);
+
+        answerField = new JTextField(10);
+        answerField.setFont(new Font("Arial", Font.BOLD, 22));
+        answerField.setMaximumSize(new Dimension(250, 50));
+        answerField.setHorizontalAlignment(JTextField.CENTER);
+        answerField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        answerField.setEnabled(false);
+        answerField.setBackground(new Color(255, 255, 255));
+        answerField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(52, 152, 219), 3),
+                BorderFactory.createEmptyBorder(8, 15, 8, 15)));
+        mainPanel.add(Box.createVerticalStrut(10));
+        mainPanel.add(answerField);
+
+        // Submit button with modern styling
+        mainPanel.add(Box.createVerticalStrut(20));
+        submitButton = new JButton("✅ SUBMIT ANSWER ✅");
+        submitButton.setFont(new Font("Arial", Font.BOLD, 16));
+        submitButton.setPreferredSize(new Dimension(250, 50));
+        submitButton.setMaximumSize(new Dimension(250, 50));
+        submitButton.setBackground(new Color(52, 152, 219)); // Modern blue
+        submitButton.setForeground(Color.WHITE);
+        submitButton.setFocusPainted(false);
+        submitButton.setBorder(BorderFactory.createLineBorder(new Color(41, 128, 185), 3));
+        submitButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        submitButton.setEnabled(false);
+        submitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        submitButton.addActionListener(e -> checkAnswer());
+        mainPanel.add(submitButton);
+
+        // Score display with modern styling
+        mainPanel.add(Box.createVerticalStrut(25));
+        JPanel scorePanel = new JPanel();
+        scorePanel.setBackground(new Color(255, 255, 255, 230)); // Semi-transparent white
+        scorePanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(255, 255, 255), 3),
+                BorderFactory.createEmptyBorder(15, 25, 15, 25)));
+        scorePanel.setMaximumSize(new Dimension(450, 65));
+
+        scoreLabel = new JLabel("🏆 Score: 0 | ❌ Errors: 0");
+        scoreLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        scoreLabel.setForeground(new Color(44, 62, 80)); // Dark blue-gray
+        scorePanel.add(scoreLabel);
+
+        mainPanel.add(scorePanel);
+
+        // Error message with modern styling
+        mainPanel.add(Box.createVerticalStrut(15));
+        errorLabel = new JLabel(" ");
+        errorLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        errorLabel.setForeground(new Color(231, 76, 60)); // Modern red
+        errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainPanel.add(errorLabel);
+
+        add(mainPanel);
+
+        // Enter key to submit
+        answerField.addActionListener(e -> checkAnswer());
+    }
+
+    private void startGame() {
+        String selected = (String) levelCombo.getSelectedItem();
+        // Extract difficulty from emoji labels and set time limits
+        if (selected.contains("Easy")) {
+            difficulty = "Easy";
+            timeLimit = 30; // 30 seconds for Easy
+        } else if (selected.contains("Medium")) {
+            difficulty = "Medium";
+            timeLimit = 25; // 25 seconds for Medium
+        } else {
+            difficulty = "Hard";
+            timeLimit = 20; // 20 seconds for Hard
+        }
+
+        score = 0;
+        errors = 0;
+        questionsAnswered = 0;
+        timeRemaining = timeLimit;
+        gameStarted = true;
+
+        levelCombo.setEnabled(false);
+        startButton.setEnabled(false);
+        answerField.setEnabled(true);
+        submitButton.setEnabled(true);
+        errorLabel.setText(" ");
+
+        // Update timer display and reset color
+        timerLabel.setText("⏱️ Time: " + timeRemaining + "s");
+        timerLabel.setForeground(new Color(255, 255, 100)); // Reset to yellow
+
+        // Start countdown timer
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        gameTimer = new Timer(1000, e -> {
+            timeRemaining--;
+            timerLabel.setText("⏱️ Time: " + timeRemaining + "s");
+
+            // Change color when time is running low
+            if (timeRemaining <= 5) {
+                timerLabel.setForeground(new Color(255, 100, 100)); // Red warning
+            } else if (timeRemaining <= 10) {
+                timerLabel.setForeground(new Color(255, 200, 100)); // Orange warning
+            }
+
+            // End game when time runs out
+            if (timeRemaining <= 0) {
+                gameTimer.stop();
+                endGame();
+            }
+        });
+        gameTimer.start();
+
+        updateScore();
+        generateQuestion();
+    }
+
+    private void generateQuestion() {
+        // Generate numbers based on difficulty
+        if (difficulty.equals("Easy")) {
+            num1 = random.nextInt(50) + 1; // 1-50
+            num2 = random.nextInt(50) + 1;
+        } else if (difficulty.equals("Medium")) {
+            num1 = random.nextInt(51) + 50; // 50-100
+            num2 = random.nextInt(51) + 50;
+        } else { // Hard
+            num1 = random.nextInt(201) + 100; // 100-300
+            num2 = random.nextInt(201) + 100;
+        }
+
+        // Choose operation
+        String[] operations = { "+", "-", "*", "/" };
+        operation = operations[random.nextInt(4)];
+
+        // Calculate answer
+        if (operation.equals("+")) {
+            correctAnswer = num1 + num2;
+        } else if (operation.equals("-")) {
+            // Make sure result is positive
+            if (num2 > num1) {
+                int temp = num1;
+                num1 = num2;
+                num2 = temp;
+            }
+            correctAnswer = num1 - num2;
+        } else if (operation.equals("*")) {
+            // Use appropriate numbers for multiplication based on difficulty
+            if (difficulty.equals("Easy")) {
+                num1 = random.nextInt(10) + 1; // 1-10 for easier multiplication
+                num2 = random.nextInt(10) + 1;
+            } else if (difficulty.equals("Medium")) {
+                num1 = random.nextInt(15) + 5; // 5-20 for medium
+                num2 = random.nextInt(15) + 5;
+            } else {
+                num1 = random.nextInt(20) + 10; // 10-30 for hard
+                num2 = random.nextInt(20) + 10;
+            }
+            correctAnswer = num1 * num2;
+        } else { // Division
+            // Make sure division is exact
+            if (difficulty.equals("Easy")) {
+                num2 = random.nextInt(10) + 1; // Divisor 1-10
+                correctAnswer = random.nextInt(10) + 1; // Result 1-10
+            } else if (difficulty.equals("Medium")) {
+                num2 = random.nextInt(15) + 5; // Divisor 5-20
+                correctAnswer = random.nextInt(15) + 5; // Result 5-20
+            } else {
+                num2 = random.nextInt(20) + 10; // Divisor 10-30
+                correctAnswer = random.nextInt(20) + 10; // Result 10-30
+            }
+            num1 = num2 * correctAnswer;
+        }
+
+        questionLabel.setText("What is " + num1 + " " + operation + " " + num2 + " ?");
+        answerField.setText("");
+        answerField.requestFocus();
+    }
+
+    private void checkAnswer() {
+        if (!gameStarted)
+            return;
+
+        String input = answerField.getText().trim();
+
+        if (input.isEmpty()) {
+            errorLabel.setText("⚠️ Please enter an answer!");
+            return;
+        }
+
+        try {
+            int userAnswer = Integer.parseInt(input);
+            questionsAnswered++;
+
+            if (userAnswer == correctAnswer) {
+                score++;
+                errorLabel.setForeground(new Color(0, 150, 0));
+                errorLabel.setText("🎉 CORRECT! 🎉");
+            } else {
+                errors++;
+                errorLabel.setForeground(Color.RED);
+                errorLabel.setText("❌ WRONG! Answer: " + correctAnswer);
+            }
+
+            updateScore();
+
+            // Check if game should end
+            if (questionsAnswered >= 10) {
+                endGame();
+            } else {
+                generateQuestion();
+            }
+
+        } catch (NumberFormatException e) {
+            errorLabel.setForeground(Color.RED);
+            errorLabel.setText("⚠️ Enter a valid number!");
+        }
+    }
+
+    private void updateScore() {
+        scoreLabel.setText("🏆 Score: " + score + " | ❌ Errors: " + errors);
+    }
+
+    private void endGame() {
+        gameStarted = false;
+        answerField.setEnabled(false);
+        submitButton.setEnabled(false);
+
+        // Stop timer
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+
+        // Calculate time used
+        int timeUsed = timeLimit - timeRemaining;
+
+        double percentage = (score * 100.0) / questionsAnswered;
+
+        String message = "🎮 GAME OVER! 🎮\n\n" +
+                "🏆 Final Score: " + score + " out of " + questionsAnswered + "\n" +
+                "❌ Errors: " + errors + "\n" +
+                "⏱️ Time Used: " + timeUsed + " / " + timeLimit + " seconds\n" +
+                "📊 Percentage: " + String.format("%.1f", percentage) + "%\n\n";
+
+        if (percentage >= 90) {
+            message += "⭐⭐⭐ Excellent work! ⭐⭐⭐";
+        } else if (percentage >= 70) {
+            message += "😊 Good job! 😊";
+        } else if (percentage >= 50) {
+            message += "💪 Keep practicing! 💪";
+        } else {
+            message += "🔄 Try again! 🔄";
+        }
+
+        JOptionPane.showMessageDialog(this, message, "Final Score", JOptionPane.INFORMATION_MESSAGE);
+
+        // Reset for new game
+        levelCombo.setEnabled(true);
+        startButton.setEnabled(true);
+        questionLabel.setText("👆 Press Start! 👆");
+        errorLabel.setText(" ");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ArithmeticGameGUI game = new ArithmeticGameGUI();
+            game.setVisible(true);
+        });
+    }
+}
+
